@@ -1,0 +1,37 @@
+name: Build DLL
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Build Release x64
+        shell: cmd
+        run: msbuild Osiris.sln /m /p:Platform=x64 /p:Configuration=Release
+
+      - name: Collect DLL
+        shell: powershell
+        run: |
+          $dll = Get-ChildItem -Path . -Recurse -Filter Osiris.dll | Select-Object -First 1
+          if (-not $dll) { throw "Osiris.dll not found" }
+          New-Item -ItemType Directory -Force -Path artifact | Out-Null
+          Copy-Item $dll.FullName artifact\Osiris.dll
+          Write-Host "Collected: $($dll.FullName)"
+
+      - name: Upload DLL
+        uses: actions/upload-artifact@v4
+        with:
+          name: Osiris-DLL
+          path: artifact/Osiris.dll
+          if-no-files-found: error
