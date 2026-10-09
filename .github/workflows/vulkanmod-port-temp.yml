@@ -1,0 +1,53 @@
+name: VulkanMod 1.21.8 Port Temp
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Checkout VulkanMod 0.6.6
+        run: |
+          git clone https://github.com/xCollateral/VulkanMod.git src
+          cd src
+          git checkout 67e20f1f359a3a0611e2312a8a72e47fc9a09737
+      - name: Set Minecraft 1.21.8
+        run: |
+          cd src
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('gradle.properties')
+          s = p.read_text()
+          s = s.replace('minecraft_version = 1.21.10', 'minecraft_version = 1.21.8')
+          s = s.replace('yarn_mappings = 1.21.10+build.2', 'yarn_mappings = 1.21.8+build.1')
+          s = s.replace('fabric_version = 0.138.0+1.21.10', 'fabric_version = 0.136.1+1.21.8')
+          s = s.replace('mod_version = 0.6.6-dev', 'mod_version = 0.6.6+1.21.8-port')
+          s = s.replace('archives_base_name = VulkanMod_1.21.10', 'archives_base_name = VulkanMod_1.21.8')
+          p.write_text(s)
+          p = Path('src/main/resources/fabric.mod.json')
+          s = p.read_text().replace('"minecraft": ["1.21.9", "1.21.10"]', '"minecraft": ["1.21.8"]')
+          p.write_text(s)
+          PY
+      - name: Build
+        run: |
+          cd src
+          chmod +x gradlew
+          ./gradlew build --stacktrace --no-daemon
+      - name: Collect JAR
+        run: |
+          mkdir -p out
+          find src/build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*sources*' -exec cp {} out/ \;
+          ls -lah out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VulkanMod-1.21.8-port
+          path: out/*.jar
+          if-no-files-found: error
