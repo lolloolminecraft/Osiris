@@ -4,9 +4,12 @@ on:
   push:
     branches:
       - master
-  issues:
+  pull_request:
+    branches:
+      - master
     types:
       - opened
+      - synchronize
   workflow_dispatch:
 
 jobs:
